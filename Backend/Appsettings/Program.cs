@@ -1,13 +1,44 @@
+using Backend.Models;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+var todos = new List<ToDoItem>
+{
+    new ToDoItem { Id = 1, Title = "Zrobic backend"},
+    new ToDoItem { Id = 2, Title = "Odpalic Reacta"},
+};
+
+app.MapGet("/api/todos", () => todos);
+app.MapPost("/api/todos", (ToDoItem newTodo) =>
+{
+    todos.Add(newTodo);
+    return newTodo;
+});
+app.MapPut("/api/todos/{id}", (int id, ToDoItem updatedTodo) =>
+{
+    var todo = todos.Find(t => t.Id == id);
+    if (todo == null) 
+        return Results.NotFound("Not found");
+
+    todo.Title = updatedTodo.Title;
+    todo.IsDone = updatedTodo.IsDone;
+
+    return Results.Ok(todo); 
+});
+app.MapDelete("/api/todos/{id}", (int id) =>
+{
+    var todo = todos.Find(t => t.Id == id);
+    if (todo == null)
+        return Results.NotFound("Not found");
+    todos.Remove(todo);
+    return Results.Ok(todo);
+});
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
