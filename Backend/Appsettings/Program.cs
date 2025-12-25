@@ -1,16 +1,27 @@
 using Backend.Models;
 
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 var app = builder.Build();
+app.UseCors("AllowAll");
+
 
 var todos = new List<ToDoItem>
 {
-    new ToDoItem { Id = 1, Title = "Zrobic backend"},
-    new ToDoItem { Id = 2, Title = "Odpalic Reacta"},
+   // new ToDoItem { Id = 1, Title = "Zrobic backend"},
+   // new ToDoItem { Id = 2, Title = "Odpalic Reacta"},
 };
 
 app.MapGet("/api/todos", () => todos);
