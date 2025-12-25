@@ -1,9 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 function TodoApp() {
-    const [todos, setTodos] = useState([
-        { id: 1, title: "First task", isDone: false }
-    ]);
+    const [todos, setTodos] = useState(() => {
+        const saved = localStorage.getItem('todos');
+        return saved ? JSON.parse(saved) : [
+            { id: 1, title: "Zrobic backend", isDone: false },
+            { id: 2, title: "Odpalic Reacta", isDone: false }
+        ];
+    });
+
+    useEffect(() => {
+        localStorage.setItem('todos', JSON.stringify(todos));
+    }, [todos]);
+
     const [newTask, setNewTask] = useState('');
     const [filter, setFilter] = useState('all');
 
@@ -11,24 +20,27 @@ function TodoApp() {
         if (newTask.trim() === '') return;
 
         const newTaskObj = {
-            id: Date.now(), // unikalne id
+            id: Date.now(),
             title: newTask,
             isDone: false
         };
 
-        setTodos([...todos, newTaskObj]);
+        setTodos(prev => [...prev, newTaskObj]);
         setNewTask('');
     };
 
     const handleDeleteTask = (id) => {
-        setTodos(todos.filter(todo => todo.id !== id));
+        setTodos(prev => prev.filter(todo => todo.id !== id));
     };
 
     const handleToggleDone = (id) => {
-        setTodos(todos.map(todo =>
-            todo.id === id ? { ...todo, isDone: !todo.isDone } : todo
-        ));
+        setTodos(prev =>
+            prev.map(todo =>
+                todo.id === id ? { ...todo, isDone: !todo.isDone } : todo
+            )
+        );
     };
+
     const filteredTodos = todos.filter(todo => {
         if (filter === 'all') return true;
         if (filter === 'done') return todo.isDone;
@@ -36,9 +48,8 @@ function TodoApp() {
     });
 
     return (
-
         <div>
-            <div>
+            <div style={{ marginBottom: '10px' }}>
                 <button onClick={() => setFilter('all')}>Wszystkie</button>
                 <button onClick={() => setFilter('todo')}>Do zrobienia</button>
                 <button onClick={() => setFilter('done')}>Zrobione</button>
@@ -58,7 +69,6 @@ function TodoApp() {
                     </li>
                 ))}
             </ul>
-
 
             <input
                 type="text"
