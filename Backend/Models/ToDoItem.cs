@@ -1,8 +1,11 @@
-namespace Backend.Models;
-
-public class ToDoItem
+namespace Backend.Models
 {
-    public int Id { get; set; }
-    public string Title { get; set; } = string.Empty;
-    public bool IsDone { get; set; } = false;
+    public class ToDoItem
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public bool IsDone { get; set; }
+        public int UserId { get; set; }
+        public int? GroupId { get; set; }
+    }
 }
