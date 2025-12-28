@@ -1,44 +1,61 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 
-function TodoApp() {
-    const [todos, setTodos] = useState(() => {
-        const saved = localStorage.getItem('todos');
-        return saved ? JSON.parse(saved) : [
-            { id: 1, title: "Zrobic backend", isDone: false },
-            { id: 2, title: "Odpalic Reacta", isDone: false }
-        ];
-    });
-
-    useEffect(() => {
-        localStorage.setItem('todos', JSON.stringify(todos));
-    }, [todos]);
-
+function ToDoList() {
+    const [todos, setTodos] = useState([]);
     const [newTask, setNewTask] = useState('');
     const [filter, setFilter] = useState('all');
 
-    const handleAddTask = () => {
-        if (newTask.trim() === '') return;
-
-        const newTaskObj = {
-            id: Date.now(),
-            title: newTask,
-            isDone: false
+    useEffect(() => {
+        const fetchTodos = async () => {
+            try {
+                const res = await axios.get('http://localhost:5263/api/todos');
+                setTodos(res.data);
+            } catch (err) {
+                console.error("Błąd pobierania todos:", err);
+            }
         };
+        fetchTodos();
+    }, []);
 
-        setTodos(prev => [...prev, newTaskObj]);
-        setNewTask('');
+    const handleAddTask = async () => {
+        if (newTask.trim() === '') return;
+        try {
+            const res = await axios.post('http://localhost:5263/api/todos', {
+                title: newTask,
+                isDone: false
+            });
+            setTodos(prev => [...prev, res.data]);
+            setNewTask('');
+        } catch (err) {
+            console.error("Błąd dodawania todo:", err);
+        }
     };
 
-    const handleDeleteTask = (id) => {
-        setTodos(prev => prev.filter(todo => todo.id !== id));
+    const handleDeleteTask = async (id) => {
+        try {
+            await axios.delete(`http://localhost:5263/api/todos/${id}`);
+            setTodos(prev => prev.filter(todo => todo.id !== id));
+        } catch (err) {
+            console.error("Błąd usuwania todo:", err);
+        }
     };
 
-    const handleToggleDone = (id) => {
-        setTodos(prev =>
-            prev.map(todo =>
-                todo.id === id ? { ...todo, isDone: !todo.isDone } : todo
-            )
-        );
+    const handleToggleDone = async (id, isDone) => {
+        try {
+            const todoToUpdate = todos.find(todo => todo.id === id);
+            const res = await axios.put(`http://localhost:5263/api/todos/${id}`, {
+                ...todoToUpdate,
+                isDone: !isDone
+            });
+            setTodos(prev =>
+                prev.map(todo =>
+                    todo.id === id ? res.data : todo
+                )
+            );
+        } catch (err) {
+            console.error("Błąd aktualizacji todo:", err);
+        }
     };
 
     const filteredTodos = todos.filter(todo => {
@@ -54,7 +71,6 @@ function TodoApp() {
                 <button onClick={() => setFilter('todo')}>Do zrobienia</button>
                 <button onClick={() => setFilter('done')}>Zrobione</button>
             </div>
-
             <h2>Lista zadań</h2>
             <ul>
                 {filteredTodos.map(todo => (
@@ -62,14 +78,13 @@ function TodoApp() {
                         <input
                             type="checkbox"
                             checked={todo.isDone}
-                            onChange={() => handleToggleDone(todo.id)}
+                            onChange={() => handleToggleDone(todo.id, todo.isDone)}
                         />
                         {todo.title}
                         <button onClick={() => handleDeleteTask(todo.id)}>Usuń</button>
                     </li>
                 ))}
             </ul>
-
             <input
                 type="text"
                 placeholder="Nowe zadanie"
@@ -81,4 +96,4 @@ function TodoApp() {
     );
 }
 
-export default TodoApp;
+export default ToDoList;
