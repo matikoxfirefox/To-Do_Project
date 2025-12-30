@@ -21,51 +21,113 @@ var app = builder.Build();
 app.UseCors("AllowAll");
 app.UseSwagger();
 app.UseSwaggerUI();
+app.UseDefaultFiles();
+app.UseStaticFiles();
 
+// AUTH
 app.MapPost("/api/auth", async (AppDbContext db, AuthRequest req) =>
 {
     if (req.Action == "register")
     {
-        var exists = await db.Users.AnyAsync(u => u.Username == req.Username);
-        if (exists) return Results.BadRequest(new { error = "Użytkownik już istnieje" });
+        if (await db.Users.AnyAsync(u => u.Username == req.Username))
+            return Results.BadRequest(new { error = "Użytkownik już istnieje" });
 
         var newUser = new User { Username = req.Username, Password = req.Password };
         db.Users.Add(newUser);
         await db.SaveChangesAsync();
         return Results.Ok(new { id = newUser.Id, username = newUser.Username });
     }
-    else if (req.Action == "login")
+
+    if (req.Action == "login")
     {
         var user = await db.Users.FirstOrDefaultAsync(u => u.Username == req.Username && u.Password == req.Password);
         if (user == null) return Results.BadRequest(new { error = "Nieprawidłowe dane" });
+
         return Results.Ok(new { id = user.Id, username = user.Username });
     }
+
     return Results.BadRequest(new { error = "Nieznana akcja" });
 });
 
-
+// GRUPY
 app.MapPost("/api/groups", async (AppDbContext db, Group group) =>
 {
+    if (group.OwnerId == 0) return Results.BadRequest("OwnerId required");
+
     db.Groups.Add(group);
     await db.SaveChangesAsync();
     return Results.Created($"/api/groups/{group.Id}", group);
 });
 
-app.MapGet("/api/users/{userId}/groups", async (AppDbContext db, int userId) =>
+app.MapGet("/api/groups/{userId}", async (AppDbContext db, int userId) =>
 {
-    return await db.Groups.Where(g => g.UserId == userId).ToListAsync();
+    return await db.Groups.Where(g => g.OwnerId == userId).ToListAsync();
 });
 
+// USUWANIE GRUPY (razem z TodoItem)
+app.MapDelete("/api/groups/{groupId}", async (AppDbContext db, int groupId) =>
+{
+    var group = await db.Groups
+        .Include(g => g.Todos) // pobieramy powiązane zadania
+        .FirstOrDefaultAsync(g => g.Id == groupId);
+
+    if (group == null) return Results.NotFound("Grupa nie istnieje");
+
+    // usuwamy wszystkie powiązane TodoItem
+    if (group.Todos != null && group.Todos.Count > 0)
+        db.Todos.RemoveRange(group.Todos);
+
+    db.Groups.Remove(group);
+    await db.SaveChangesAsync();
+    return Results.Ok();
+});
+
+// DODAWANIE UŻYTKOWNIKA DO GRUPY
+app.MapPost("/api/groups/{groupId}/users", async (
+    AppDbContext db,
+    int groupId,
+    AddUserToGroupDto dto) =>
+{
+    var user = await db.Users.FirstOrDefaultAsync(u => u.Username == dto.Username);
+    if (user == null) return Results.NotFound("User not found");
+
+    var exists = await db.GroupUsers.AnyAsync(gu => gu.GroupId == groupId && gu.UserId == user.Id);
+    if (exists) return Results.BadRequest("User already in group");
+
+    db.GroupUsers.Add(new GroupUser { GroupId = groupId, UserId = user.Id });
+    await db.SaveChangesAsync();
+    return Results.Ok();
+});
+
+// TODOS
 app.MapGet("/api/todos/{userId}", async (AppDbContext db, int userId, int? groupId) =>
 {
-    var query = db.Todos.Where(t => t.UserId == userId);
-    if (groupId.HasValue) query = query.Where(t => t.GroupId == groupId.Value);
-    return await query.ToListAsync();
+    if (!groupId.HasValue)
+        return Results.BadRequest("groupId required");
+
+    // sprawdzamy czy user jest w grupie
+    var isMember = await db.GroupUsers.AnyAsync(gu =>
+        gu.GroupId == groupId.Value && gu.UserId == userId);
+
+    if (!isMember)
+        return Results.Forbid();
+
+    var todos = await db.Todos
+        .Include(t => t.Owner)
+        .Where(t => t.GroupId == groupId.Value)
+        .ToListAsync();
+
+    return Results.Ok(todos);
 });
+
+
 
 app.MapPost("/api/todos/{userId}", async (AppDbContext db, int userId, ToDoItem newTodo) =>
 {
-    newTodo.UserId = userId;
+    newTodo.OwnerId = userId;
+    newTodo.DateAdded = DateTime.UtcNow;
+    if (newTodo.Priority < 0 || newTodo.Priority > 2) newTodo.Priority = 1;
+
     db.Todos.Add(newTodo);
     await db.SaveChangesAsync();
     return Results.Created($"/api/todos/{newTodo.Id}", newTodo);
@@ -74,10 +136,12 @@ app.MapPost("/api/todos/{userId}", async (AppDbContext db, int userId, ToDoItem 
 app.MapPut("/api/todos/{id}", async (AppDbContext db, int id, ToDoItem updatedTodo) =>
 {
     var todo = await db.Todos.FindAsync(id);
-    if (todo == null) return Results.NotFound("Not found");
+    if (todo == null) return Results.NotFound();
+
     todo.Title = updatedTodo.Title;
     todo.IsDone = updatedTodo.IsDone;
     todo.GroupId = updatedTodo.GroupId;
+
     await db.SaveChangesAsync();
     return Results.Ok(todo);
 });
@@ -85,11 +149,47 @@ app.MapPut("/api/todos/{id}", async (AppDbContext db, int id, ToDoItem updatedTo
 app.MapDelete("/api/todos/{id}", async (AppDbContext db, int id) =>
 {
     var todo = await db.Todos.FindAsync(id);
-    if (todo == null) return Results.NotFound("Not found");
+    if (todo == null) return Results.NotFound();
+
     db.Todos.Remove(todo);
     await db.SaveChangesAsync();
-    return Results.Ok(todo);
+    return Results.Ok();
 });
+app.MapGet("/api/todos/group/{groupId}/all", async (AppDbContext db, int groupId) =>
+{
+    var todos = await db.Todos
+        .Where(t => t.GroupId == groupId)
+        .ToListAsync();
+    return Results.Ok(todos);
+});
+
+// GET GRUP UŻYTKOWNIKA
+app.MapGet("/api/users/{userId}/groups", async (AppDbContext db, int userId) =>
+{
+    var ownerGroups = db.Groups.Where(g => g.OwnerId == userId);
+    var memberGroups = db.GroupUsers
+        .Where(gu => gu.UserId == userId)
+        .Select(gu => gu.Group);
+
+    var allGroups = await ownerGroups
+        .Union(memberGroups)
+        .Distinct()
+        .ToListAsync();
+
+    return Results.Ok(allGroups);
+});
+
 
 app.Urls.Add("http://localhost:5263");
 app.Run();
+app.MapGet("/api/todos/group/{groupId}", async (AppDbContext db, int groupId) =>
+{
+    return await db.Todos
+        .Include(t => t.Owner)
+        .Where(t => t.GroupId == groupId)
+        .ToListAsync();
+});
+
+
+// DTO
+public record AddUserToGroupDto(string Username);
