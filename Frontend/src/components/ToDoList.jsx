@@ -1,97 +1,127 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useState } from "react";
+import axios from "axios";
+const getPriorityLabel = (priority) => {
+    switch(priority) {
+        case 0: return "Niski";
+        case 1: return "Średni";
+        case 2: return "Wysoki";
+        default: return "Średni";
+    }
+};
 
-function ToDoList() {
-    const [todos, setTodos] = useState([]);
-    const [newTask, setNewTask] = useState('');
-    const [filter, setFilter] = useState('all');
+const API = "http://localhost:5263/api";
 
-    useEffect(() => {
-        const fetchTodos = async () => {
-            try {
-                const res = await axios.get('http://localhost:5263/api/todos');
-                setTodos(res.data);
-            } catch (err) {
-                console.error("Błąd pobierania todos:", err);
-            }
-        };
-        fetchTodos();
-    }, []);
+function ToDoList({ todos, fetchTodos, userId, groupId }) {
+    const [newTask, setNewTask] = useState("");
+    const [newDescription, setNewDescription] = useState("");
+    const [newPriority, setNewPriority] = useState(1); // stan dla priorytetu
+    const [filter, setFilter] = useState("all"); // all / done / pending
 
     const handleAddTask = async () => {
-        if (newTask.trim() === '') return;
+        if (!newTask.trim()) return;
         try {
-            const res = await axios.post('http://localhost:5263/api/todos', {
+            await axios.post(`${API}/todos/${userId}`, {
                 title: newTask,
-                isDone: false
+                description: newDescription.slice(0, 100),
+                groupId,
+                isDone: false,
+                priority: Number(newPriority), // wysyłamy priorytet jako liczba
+                dateAdded: new Date().toISOString() // ustawiamy datę dodania
             });
-            setTodos(prev => [...prev, res.data]);
-            setNewTask('');
+            setNewTask("");
+            setNewDescription("");
+            setNewPriority(1); // <-- reset na 1, nie "medium"
+            fetchTodos(groupId); // odświeżenie po dodaniu
         } catch (err) {
-            console.error("Błąd dodawania todo:", err);
+            console.error("Błąd dodawania zadania:", err);
         }
     };
 
     const handleDeleteTask = async (id) => {
         try {
-            await axios.delete(`http://localhost:5263/api/todos/${id}`);
-            setTodos(prev => prev.filter(todo => todo.id !== id));
+            await axios.delete(`${API}/todos/${id}`);
+            fetchTodos(groupId);
         } catch (err) {
-            console.error("Błąd usuwania todo:", err);
+            console.error("Błąd usuwania zadania:", err);
         }
     };
 
-    const handleToggleDone = async (id, isDone) => {
+    const handleToggleDone = async (todo) => {
         try {
-            const todoToUpdate = todos.find(todo => todo.id === id);
-            const res = await axios.put(`http://localhost:5263/api/todos/${id}`, {
-                ...todoToUpdate,
-                isDone: !isDone
+            await axios.put(`${API}/todos/${todo.id}`, {
+                ...todo,
+                isDone: !todo.isDone
             });
-            setTodos(prev =>
-                prev.map(todo =>
-                    todo.id === id ? res.data : todo
-                )
-            );
+            fetchTodos(groupId);
         } catch (err) {
-            console.error("Błąd aktualizacji todo:", err);
+            console.error("Błąd aktualizacji zadania:", err);
         }
     };
 
     const filteredTodos = todos.filter(todo => {
-        if (filter === 'all') return true;
-        if (filter === 'done') return todo.isDone;
-        if (filter === 'todo') return !todo.isDone;
+        if (filter === "all") return true;
+        if (filter === "done") return todo.isDone;
+        if (filter === "pending") return !todo.isDone;
+        return true;
     });
 
     return (
-        <div>
-            <div style={{ marginBottom: '10px' }}>
-                <button onClick={() => setFilter('all')}>Wszystkie</button>
-                <button onClick={() => setFilter('todo')}>Do zrobienia</button>
-                <button onClick={() => setFilter('done')}>Zrobione</button>
-            </div>
+        <div style={{ marginTop: "20px" }}>
             <h2>Lista zadań</h2>
+
+            {/* Zakładki */}
+            <div style={{ marginBottom: "10px" }}>
+                <button onClick={() => setFilter("all")} disabled={filter === "all"}>Wszystkie</button>
+                <button onClick={() => setFilter("pending")} disabled={filter === "pending"} style={{ marginLeft: 5 }}>Do wykonania</button>
+                <button onClick={() => setFilter("done")} disabled={filter === "done"} style={{ marginLeft: 5 }}>Wykonane</button>
+            </div>
+
             <ul>
                 {filteredTodos.map(todo => (
-                    <li key={todo.id}>
+                    <li key={todo.id} style={{ marginBottom: "5px" }}>
                         <input
                             type="checkbox"
                             checked={todo.isDone}
-                            onChange={() => handleToggleDone(todo.id, todo.isDone)}
+                            onChange={() => handleToggleDone(todo)}
+                            style={{ marginRight: "10px" }}
                         />
-                        {todo.title}
-                        <button onClick={() => handleDeleteTask(todo.id)}>Usuń</button>
+                        <strong>{todo.title}</strong> {todo.description && `- ${todo.description}`}
+                        <span style={{ marginLeft: "10px", fontSize: "0.8em", color: "gray" }}>
+                           [{getPriorityLabel(todo.priority)}] Dodano: {todo.dateAdded ? new Date(todo.dateAdded).toLocaleString() : ""}
+                        </span>
+                        <button onClick={() => handleDeleteTask(todo.id)} style={{ marginLeft: "10px" }}>
+                            Usuń
+                        </button>
                     </li>
                 ))}
             </ul>
-            <input
-                type="text"
-                placeholder="Nowe zadanie"
-                value={newTask}
-                onChange={e => setNewTask(e.target.value)}
-            />
-            <button onClick={handleAddTask}>Dodaj</button>
+
+            <div style={{ marginTop: "10px" }}>
+                <input
+                    type="text"
+                    value={newTask}
+                    onChange={e => setNewTask(e.target.value)}
+                    placeholder="Nowe zadanie"
+                    style={{ marginRight: "10px" }}
+                />
+                <input
+                    type="text"
+                    value={newDescription}
+                    onChange={e => setNewDescription(e.target.value)}
+                    placeholder="Opis (max 100 znaków)"
+                    style={{ marginRight: "10px" }}
+                />
+                <select
+                    value={newPriority}
+                    onChange={e => setNewPriority(Number(e.target.value))} // <-- konwersja na int
+                    style={{ marginRight: "10px" }}
+                >
+                    <option value={0}>Niski</option>
+                    <option value={1}>Średni</option>
+                    <option value={2}>Wysoki</option>
+                </select>
+                <button onClick={handleAddTask}>Dodaj</button>
+            </div>
         </div>
     );
 }
