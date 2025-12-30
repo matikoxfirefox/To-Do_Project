@@ -37,7 +37,6 @@ app.MapPost("/api/auth", async (AppDbContext db, AuthRequest req) =>
         await db.SaveChangesAsync();
         return Results.Ok(new { id = newUser.Id, username = newUser.Username });
     }
-
     if (req.Action == "login")
     {
         var user = await db.Users.FirstOrDefaultAsync(u => u.Username == req.Username && u.Password == req.Password);
@@ -49,7 +48,6 @@ app.MapPost("/api/auth", async (AppDbContext db, AuthRequest req) =>
     return Results.BadRequest(new { error = "Nieznana akcja" });
 });
 
-// GRUPY
 app.MapPost("/api/groups", async (AppDbContext db, Group group) =>
 {
     if (group.OwnerId == 0) return Results.BadRequest("OwnerId required");
@@ -63,17 +61,13 @@ app.MapGet("/api/groups/{userId}", async (AppDbContext db, int userId) =>
 {
     return await db.Groups.Where(g => g.OwnerId == userId).ToListAsync();
 });
-
-// USUWANIE GRUPY (razem z TodoItem)
 app.MapDelete("/api/groups/{groupId}", async (AppDbContext db, int groupId) =>
 {
     var group = await db.Groups
-        .Include(g => g.Todos) // pobieramy powiązane zadania
+        .Include(g => g.Todos) 
         .FirstOrDefaultAsync(g => g.Id == groupId);
 
     if (group == null) return Results.NotFound("Grupa nie istnieje");
-
-    // usuwamy wszystkie powiązane TodoItem
     if (group.Todos != null && group.Todos.Count > 0)
         db.Todos.RemoveRange(group.Todos);
 
@@ -81,8 +75,6 @@ app.MapDelete("/api/groups/{groupId}", async (AppDbContext db, int groupId) =>
     await db.SaveChangesAsync();
     return Results.Ok();
 });
-
-// DODAWANIE UŻYTKOWNIKA DO GRUPY
 app.MapPost("/api/groups/{groupId}/users", async (
     AppDbContext db,
     int groupId,
@@ -98,14 +90,10 @@ app.MapPost("/api/groups/{groupId}/users", async (
     await db.SaveChangesAsync();
     return Results.Ok();
 });
-
-// TODOS
 app.MapGet("/api/todos/{userId}", async (AppDbContext db, int userId, int? groupId) =>
 {
     if (!groupId.HasValue)
         return Results.BadRequest("groupId required");
-
-    // sprawdzamy czy user jest w grupie
     var isMember = await db.GroupUsers.AnyAsync(gu =>
         gu.GroupId == groupId.Value && gu.UserId == userId);
 
@@ -119,9 +107,6 @@ app.MapGet("/api/todos/{userId}", async (AppDbContext db, int userId, int? group
 
     return Results.Ok(todos);
 });
-
-
-
 app.MapPost("/api/todos/{userId}", async (AppDbContext db, int userId, ToDoItem newTodo) =>
 {
     newTodo.OwnerId = userId;
@@ -132,7 +117,6 @@ app.MapPost("/api/todos/{userId}", async (AppDbContext db, int userId, ToDoItem 
     await db.SaveChangesAsync();
     return Results.Created($"/api/todos/{newTodo.Id}", newTodo);
 });
-
 app.MapPut("/api/todos/{id}", async (AppDbContext db, int id, ToDoItem updatedTodo) =>
 {
     var todo = await db.Todos.FindAsync(id);
@@ -145,7 +129,6 @@ app.MapPut("/api/todos/{id}", async (AppDbContext db, int id, ToDoItem updatedTo
     await db.SaveChangesAsync();
     return Results.Ok(todo);
 });
-
 app.MapDelete("/api/todos/{id}", async (AppDbContext db, int id) =>
 {
     var todo = await db.Todos.FindAsync(id);
@@ -162,8 +145,6 @@ app.MapGet("/api/todos/group/{groupId}/all", async (AppDbContext db, int groupId
         .ToListAsync();
     return Results.Ok(todos);
 });
-
-// GET GRUP UŻYTKOWNIKA
 app.MapGet("/api/users/{userId}/groups", async (AppDbContext db, int userId) =>
 {
     var ownerGroups = db.Groups.Where(g => g.OwnerId == userId);
@@ -178,8 +159,6 @@ app.MapGet("/api/users/{userId}/groups", async (AppDbContext db, int userId) =>
 
     return Results.Ok(allGroups);
 });
-
-
 app.Urls.Add("http://localhost:5263");
 app.Run();
 app.MapGet("/api/todos/group/{groupId}", async (AppDbContext db, int groupId) =>
@@ -189,7 +168,4 @@ app.MapGet("/api/todos/group/{groupId}", async (AppDbContext db, int groupId) =>
         .Where(t => t.GroupId == groupId)
         .ToListAsync();
 });
-
-
-// DTO
 public record AddUserToGroupDto(string Username);
