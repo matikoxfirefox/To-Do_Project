@@ -14,9 +14,8 @@ const API = "http://localhost:5263/api";
 function ToDoList({ todos, fetchTodos, userId, groupId }) {
     const [newTask, setNewTask] = useState("");
     const [newDescription, setNewDescription] = useState("");
-    const [newPriority, setNewPriority] = useState(1); // stan dla priorytetu
-    const [filter, setFilter] = useState("all"); // all / done / pending
-
+    const [newPriority, setNewPriority] = useState(1);
+    const [filter, setFilter] = useState("all");
     const handleAddTask = async () => {
         if (!newTask.trim()) return;
         try {
@@ -25,18 +24,17 @@ function ToDoList({ todos, fetchTodos, userId, groupId }) {
                 description: newDescription.slice(0, 100),
                 groupId,
                 isDone: false,
-                priority: Number(newPriority), // wysyłamy priorytet jako liczba
-                dateAdded: new Date().toISOString() // ustawiamy datę dodania
+                priority: Number(newPriority),
+                dateAdded: new Date().toISOString()
             });
             setNewTask("");
             setNewDescription("");
-            setNewPriority(1); // <-- reset na 1, nie "medium"
-            fetchTodos(groupId); // odświeżenie po dodaniu
+            setNewPriority(1);
+            fetchTodos(groupId);
         } catch (err) {
             console.error("Błąd dodawania zadania:", err);
         }
-    };
-
+    }
     const handleDeleteTask = async (id) => {
         try {
             await axios.delete(`${API}/todos/${id}`);
@@ -45,7 +43,6 @@ function ToDoList({ todos, fetchTodos, userId, groupId }) {
             console.error("Błąd usuwania zadania:", err);
         }
     };
-
     const handleToggleDone = async (todo) => {
         try {
             await axios.put(`${API}/todos/${todo.id}`, {
@@ -57,25 +54,20 @@ function ToDoList({ todos, fetchTodos, userId, groupId }) {
             console.error("Błąd aktualizacji zadania:", err);
         }
     };
-
     const filteredTodos = todos.filter(todo => {
         if (filter === "all") return true;
         if (filter === "done") return todo.isDone;
         if (filter === "pending") return !todo.isDone;
         return true;
     });
-
     return (
         <div style={{ marginTop: "20px" }}>
             <h2>Lista zadań</h2>
-
-            {/* Zakładki */}
             <div style={{ marginBottom: "10px" }}>
                 <button onClick={() => setFilter("all")} disabled={filter === "all"}>Wszystkie</button>
                 <button onClick={() => setFilter("pending")} disabled={filter === "pending"} style={{ marginLeft: 5 }}>Do wykonania</button>
                 <button onClick={() => setFilter("done")} disabled={filter === "done"} style={{ marginLeft: 5 }}>Wykonane</button>
             </div>
-
             <ul>
                 {filteredTodos.map(todo => (
                     <li key={todo.id} style={{ marginBottom: "5px" }}>
@@ -95,7 +87,6 @@ function ToDoList({ todos, fetchTodos, userId, groupId }) {
                     </li>
                 ))}
             </ul>
-
             <div style={{ marginTop: "10px" }}>
                 <input
                     type="text"
@@ -125,5 +116,4 @@ function ToDoList({ todos, fetchTodos, userId, groupId }) {
         </div>
     );
 }
-
 export default ToDoList;

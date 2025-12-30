@@ -4,7 +4,6 @@ import Groups from "./components/Groups";
 import ToDoList from "./components/ToDoList";
 import axios from "axios";
 const API = "http://localhost:5263/api";
-
 function App() {
     const [userId, setUserId] = useState(() => {
         const saved = localStorage.getItem("userId");
@@ -28,7 +27,6 @@ function App() {
             console.error("Błąd fetch grup:", err);
         }
     }, [userId, selectedGroup]);
-
     const fetchTodos = useCallback(async (groupId) => {
         if (!groupId) return;
         try {
@@ -38,14 +36,11 @@ function App() {
             console.error("Błąd fetch todos:", err);
         }
     }, []);
-
-
     useEffect(() => { fetchGroups(); }, [fetchGroups]);
 
     useEffect(() => {
         if (selectedGroup) fetchTodos(selectedGroup.id);
     }, [selectedGroup, fetchTodos]);
-
     const handleAuth = async (action) => {
         setLoginError("");
         if (!username || !password) {
@@ -67,7 +62,6 @@ function App() {
             setLoginError(err.response?.data?.error || "Błąd połączenia z serwerem");
         }
     };
-
     const handleLogout = () => {
         localStorage.removeItem("userId");
         setUserId(null);
@@ -75,7 +69,6 @@ function App() {
         setTodos([]);
         setSelectedGroup(null);
     };
-
     if (!userId) {
         return (
             <div style={{
