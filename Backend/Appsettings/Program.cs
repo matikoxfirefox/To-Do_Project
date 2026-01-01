@@ -2,7 +2,7 @@ using Backend.Models;
 using Backend.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Net.Mail;
-
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<AppDbContext>(options => 
@@ -214,7 +214,7 @@ app.MapGet("/api/users/{userId}/groups", async (AppDbContext db, int userId) =>
 
     return Results.Ok(allGroups);
 });
-
+app.Urls.Add($"http://*:{port}");
 app.Urls.Add("http://localhost:5263");
 app.Run();
 
