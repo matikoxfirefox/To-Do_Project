@@ -5,7 +5,7 @@ const API = "http://localhost:5263/api";
 
 function Groups({ groups, selectedGroup, setSelectedGroup, fetchGroups, userId }) {
     const [newGroupName, setNewGroupName] = useState("");
-    const [inviteUsernames, setInviteUsernames] = useState({});
+    const [inviteEmails, setInviteEmails] = useState({});
 
     const handleAddGroup = async () => {
         if (!newGroupName.trim()) return;
@@ -17,9 +17,11 @@ function Groups({ groups, selectedGroup, setSelectedGroup, fetchGroups, userId }
             console.error("Błąd dodawania grupy:", err);
         }
     };
+
     const handleInviteChange = (groupId, value) => {
-        setInviteUsernames(prev => ({ ...prev, [groupId]: value }));
+        setInviteEmails(prev => ({ ...prev, [groupId]: value }));
     };
+
     const handleDeleteGroup = async (groupId) => {
         if (!window.confirm("Usunąć grupę?")) return;
         try {
@@ -29,13 +31,14 @@ function Groups({ groups, selectedGroup, setSelectedGroup, fetchGroups, userId }
             console.error("Błąd usuwania grupy:", err);
         }
     };
+
     const handleAddUserToGroup = async (groupId) => {
-        const username = inviteUsernames[groupId]?.trim();
-        if (!username) return;
+        const email = inviteEmails[groupId]?.trim();
+        if (!email) return;
 
         try {
-            await axios.post(`${API}/groups/${groupId}/users`, { username });
-            setInviteUsernames(prev => ({ ...prev, [groupId]: "" }));
+            await axios.post(`${API}/groups/${groupId}/users`, { email });
+            setInviteEmails(prev => ({ ...prev, [groupId]: "" }));
             alert("Użytkownik dodany do grupy");
         } catch (err) {
             console.error(err);
@@ -51,7 +54,10 @@ function Groups({ groups, selectedGroup, setSelectedGroup, fetchGroups, userId }
                     <li key={group.id}>
                         <button
                             onClick={() => setSelectedGroup(group)}
-                            style={{ fontWeight: selectedGroup?.id === group.id ? "bold" : "normal", marginTop: 15 }}
+                            style={{
+                                fontWeight: selectedGroup?.id === group.id ? "bold" : "normal",
+                                marginTop: 15
+                            }}
                         >
                             {group.name}
                         </button>
@@ -64,17 +70,16 @@ function Groups({ groups, selectedGroup, setSelectedGroup, fetchGroups, userId }
                         {selectedGroup?.id === group.id && (
                             <div style={{ marginTop: 15, marginBottom: 20 }}>
                                 <input
-                                    placeholder="Username do dodania"
-                                    value={inviteUsernames[group.id] || ""}
+                                    type="email"
+                                    placeholder="Email do dodania"
+                                    value={inviteEmails[group.id] || ""}
                                     onChange={e => handleInviteChange(group.id, e.target.value)}
                                 />
-                                <button onClick={() => handleAddUserToGroup(group.id)} style={{marginTop: 10 }}>
+                                <button onClick={() => handleAddUserToGroup(group.id)} style={{ marginTop: 10 }}>
                                     Dodaj użytkownika
                                 </button>
                             </div>
                         )}
-
-
                     </li>
                 ))}
             </ul>
@@ -83,9 +88,8 @@ function Groups({ groups, selectedGroup, setSelectedGroup, fetchGroups, userId }
                 onChange={e => setNewGroupName(e.target.value)}
                 placeholder="Nowa grupa"
             />
-            <button onClick={handleAddGroup}  style={{marginLeft: 10 }}>Dodaj</button>
+            <button onClick={handleAddGroup} style={{ marginLeft: 10 }}>Dodaj</button>
         </div>
-
     );
 }
 

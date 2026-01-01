@@ -1,184 +1,96 @@
 import { useState, useEffect, useCallback } from "react";
-/* eslint-disable react-hooks/set-state-in-effect */
+import axios from "axios";
+/* eslint-disable react-hooks/exhaustive-deps */
 import Groups from "./components/Groups";
 import ToDoList from "./components/ToDoList";
-import axios from "axios";
+import Contact from "./components/Contact";
+import About from "./components/About.jsx";
 const API = "http://localhost:5263/api";
+
 function App() {
     const [userId, setUserId] = useState(() => {
         const saved = localStorage.getItem("userId");
         return saved ? Number(saved) : null;
     });
-    const [username, setUsername] = useState("");
+    const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loginError, setLoginError] = useState("");
-
+    const [page, setPage] = useState("todos");
     const [groups, setGroups] = useState([]);
     const [selectedGroup, setSelectedGroup] = useState(null);
     const [todos, setTodos] = useState([]);
-
     const fetchGroups = useCallback(async () => {
         if (!userId) return;
-        try {
-            const res = await axios.get(`${API}/users/${userId}/groups`);
-            setGroups(res.data);
-            if (!selectedGroup && res.data.length > 0) setSelectedGroup(res.data[0]);
-        } catch (err) {
-            console.error("Błąd fetch grup:", err);
+
+        const res = await axios.get(`${API}/users/${userId}/groups`);
+        setGroups(res.data);
+        if (!selectedGroup && res.data.length > 0) {
+            setSelectedGroup(res.data[0]);
         }
     }, [userId, selectedGroup]);
+
     const fetchTodos = useCallback(async (groupId) => {
         if (!groupId) return;
-        try {
-            const res = await axios.get(`${API}/todos/group/${groupId}/all`);
-            setTodos(res.data);
-        } catch (err) {
-            console.error("Błąd fetch todos:", err);
-        }
+        const res = await axios.get(`${API}/todos/group/${groupId}/all`);
+        setTodos(res.data);
     }, []);
     useEffect(() => { fetchGroups(); }, [fetchGroups]);
-
     useEffect(() => {
         if (selectedGroup) fetchTodos(selectedGroup.id);
     }, [selectedGroup, fetchTodos]);
+
     const handleAuth = async (action) => {
         setLoginError("");
-        if (!username || !password) {
-            setLoginError("Uzupełnij login i hasło");
-            return;
-        }
         try {
-            const res = await axios.post(`${API}/auth`, { action, username, password });
-            const id = res.data?.id;
-            if (!id) {
-                setLoginError("Nieprawidłowa odpowiedź serwera");
-                return;
-            }
-            localStorage.setItem("userId", id);
-            setUserId(id);
-            setUsername("");
-            setPassword("");
-        } catch (err) {
-            setLoginError(err.response?.data?.error || "Błąd połączenia z serwerem");
+            const res = await axios.post(`${API}/auth`, { action, email, password });
+            localStorage.setItem("userId", res.data.id);
+            setUserId(res.data.id);
+        } catch {
+            setLoginError("Błąd logowania");
         }
     };
+
     const handleLogout = () => {
-        localStorage.removeItem("userId");
+        localStorage.clear();
         setUserId(null);
-        setGroups([]);
-        setTodos([]);
-        setSelectedGroup(null);
     };
+
     if (!userId) {
         return (
-            <div style={{
-                height: "100vh",
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                background: "#163c84",
-                color: "#e5e7eb",
-                width: "100vw",
-                fontFamily: "Inter, system-ui, sans-serif"
-            }}>
-                <div style={{
-                    background: "#020617",
-                    padding: 40,
-                    borderRadius: 12,
-                    boxShadow: "0 5px 50px rgba(0,0,0,0.5)",
-                    width: 660,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    height: 300,
-
-                }}>
-                    <h1 style={{ marginBottom: 24 }}>Logowanie / Rejestracja</h1>
+            <div style={styles.loginWrapper}>
+                <div style={styles.loginBox}>
+                    <h2>Logowanie</h2>
                     <input
-                        placeholder="Username"
-                        value={username}
-                        onChange={e => setUsername(e.target.value)}
-                        style={{
-                            width: "100%",
-                            padding: "10px 12px",
-                            marginBottom: 12,
-                            borderRadius: 6,
-                            border: "1px solid #374151",
-                            background: "#0f172a",
-                            color: "#e5e7eb"
-                        }}
+                        placeholder="Email"
+                        onChange={e => setEmail(e.target.value)}
+                        style={styles.input}
                     />
                     <input
                         type="password"
-                        placeholder="Password"
-                        value={password}
+                        placeholder="Hasło"
                         onChange={e => setPassword(e.target.value)}
-                        style={{
-                            width: "100%",
-                            padding: "10px 12px",
-                            marginBottom: 12,
-                            borderRadius: 6,
-                            border: "1px solid #374151",
-                            background: "#0f172a",
-                            color: "#e5e7eb"
-                        }}
+                        style={styles.input}
                     />
-                    <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
-                        <button
-                            onClick={() => handleAuth("login")}
-                            style={{
-                                flex: 1,
-                                padding: 10,
-                                borderRadius: 6,
-                                border: "none",
-                                background: "#2563eb",
-                                color: "#fff",
-                                cursor: "pointer"
-                            }}
-                        >
-                            Login
-                        </button>
-                        <button
-                            onClick={() => handleAuth("register")}
-                            style={{
-                                flex: 1,
-                                padding: 10,
-                                borderRadius: 6,
-                                border: "none",
-                                background: "#10b981",
-                                color: "#fff",
-                                cursor: "pointer"
-                            }}
-                        >
-                            Register
-                        </button>
-                    </div>
-                    {loginError && <p style={{ color: "#f87171" }}>{loginError}</p>}
+                    <button
+                        onClick={() => handleAuth("login")}
+                        style={styles.loginButton}
+                    >Login
+                    </button>
+                    <button
+                        onClick={() => handleAuth("register")}
+                        style={{ ...styles.loginButton, ...styles.registerButton }}
+                    >Register
+                    </button>
+                    {loginError && <p style={styles.loginError}>{loginError}</p>}
                 </div>
             </div>
         );
     }
 
     return (
-
-        <div style={{
-            height: "100vh",
-            display: "flex",
-            background: "#17274d",
-            color: "#e5e7eb",
-            fontFamily: "Inter, system-ui, sans-serif"
-        }}>
-            {/* SIDEBAR */}
-            <aside style={{
-                width: 280,
-                background: "#020617",
-                borderRight: "1px solid #1e293b",
-                padding: 30,
-                display: "flex",
-                flexDirection: "column"
-            }}>
-                <h2 style={{ marginBottom: 20 }}>📁 Grupy</h2>
-
+        <div style={styles.app}>
+            <aside style={styles.sidebar}>
+                <h3>📁 Grupy</h3>
                 <Groups
                     groups={groups}
                     selectedGroup={selectedGroup}
@@ -186,70 +98,129 @@ function App() {
                     fetchGroups={fetchGroups}
                     userId={userId}
                 />
-
-                <div style={{ marginTop: "auto" }}>
-                    <button
-                        onClick={handleLogout}
-                        style={{
-                            width: "100%",
-                            padding: "10px 12px",
-                            background: "#7f1d1d",
-                            color: "#fff",
-                            border: "none",
-                            borderRadius: 6,
-                            cursor: "pointer"
-                        }}
-                    >
-                        Wyloguj
-                    </button>
-                </div>
+                <button onClick={handleLogout} style={{background:"darkred",}}>Wyloguj</button>
             </aside>
 
-            {/* CONTENT */}
-            <main style={{
-                flex: 1,
-                display: "flex",
-                flexDirection: "column"
-            }}>
-                {/* TOPBAR */}
-                <header style={{
-                    height: 64,
-                    padding: "0 24px",
-                    display: "flex",
-                    alignItems: "center",
-                    borderBottom: "1px solid #1e293b",
-                    background: "#020617"
-                }}>
-                    <h1 style={{ fontSize: 20 }}>
-                        {selectedGroup ? `📝 ${selectedGroup.name}` : "Wybierz grupę"}
-                    </h1>
+            <main style={styles.main}>
+                <header style={styles.header}>
+                    <h2>{selectedGroup?.name || "Wybierz grupę"}</h2>
+
+                    <nav style={styles.nav}>
+                        {page !== "todos" && (
+                            <button onClick={() => setPage("todos")}>← Tasks</button>
+                        )}
+                        <button onClick={() => setPage("about")}>About Us</button>
+                        <button onClick={() => setPage("contact")}>Contact</button>
+                    </nav>
                 </header>
-                <section style={{
-                    flex: 1,
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    padding: 24,
-                    overflowY: "auto"
-                }}>
-                    {selectedGroup ? (
-                        <div style={{ width: "100vw" }}>
-                            <ToDoList
-                                todos={todos}
-                                fetchTodos={fetchTodos}
-                                userId={userId}
-                                groupId={selectedGroup.id}
-                            />
-                        </div>
-                    ) : (
-                        <p>Nie wybrano grupy</p>
+
+                <section style={styles.content}>
+                    {page === "todos" && selectedGroup && (
+                        <ToDoList
+                            todos={todos}
+                            fetchTodos={fetchTodos}
+                            userId={userId}
+                            groupId={selectedGroup.id}
+                        />
                     )}
+                    {page === "about" && <About />}
+                    {page === "contact" && <Contact />}
                 </section>
+                <p> &nbsp; &nbsp;© 2026 - TodoWebsite</p>
             </main>
         </div>
     );
-
-
 }
+
+const styles = {
+    input: {
+        padding: "10px 12px",
+        borderRadius: 8,
+        border: "1px solid #1e293b",
+        background: "#020617",
+        color: "#e5e7eb",
+        outline: "none",
+        fontSize: 14
+    },
+    loginButton: {
+        padding: "10px",
+        borderRadius: 8,
+        border: "none",
+        background: "#2563eb",
+        color: "white",
+        fontWeight: 600,
+        cursor: "pointer",
+        marginTop: 6
+    },
+    registerButton: {
+        background: "#16a34a"
+    },
+    loginError: {
+        color: "#f87171",
+        fontSize: 13,
+        textAlign: "center",
+        marginTop: 8
+    },
+    app: {
+        display: "flex",
+        height: "100vh",
+        width: "100%",
+        overflow: "hidden",
+        background: "#0f172a",
+        color: "#e5e7eb",
+        fontFamily: "Inter, system-ui",
+        boxSizing: "border-box"
+    },
+    sidebar: {
+        width: 280,
+        background: "#020617",
+        padding: 20,
+        display: "flex",
+        flexDirection: "column",
+        gap: 12
+    },
+    main: {
+        flex: 1,
+        display: "flex",
+        flexDirection: "column",
+        width: "100%",
+        boxSizing: "border-box"
+    },
+    header: {
+        height: 64,
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: "0 20px",
+        borderBottom: "1px solid #1e293b",
+        background: "#020617"
+    },
+    nav: {
+        display: "flex",
+        gap: 10
+    },
+    content: {
+        flex: 1,
+        padding: 20,
+        overflowY: "auto"
+    },
+    loginWrapper: {
+        height: "100vh",
+        width: "100vw",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        background: "#020617"
+    },
+    loginBox: {
+        width: 360,
+        background: "#0f172a",
+        padding: 30,
+        borderRadius: 12,
+        display: "flex",
+        flexDirection: "column",
+        gap: 12
+    }
+};
 
 export default App;
