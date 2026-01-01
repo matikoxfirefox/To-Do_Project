@@ -1,7 +1,0 @@
-{
-  "build": {
-    "builder": "dotnet",
-    "buildCommand": "dotnet publish -c Release -o out",
-    "startCommand": "dotnet out/Backend.dll"
-  }
-}
