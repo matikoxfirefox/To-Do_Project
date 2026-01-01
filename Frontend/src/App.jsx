@@ -6,7 +6,7 @@ import ToDoList from "./components/ToDoList";
 import Contact from "./components/Contact";
 import About from "./components/About.jsx";
 const API = "http://localhost:5263/api";
-
+axios.defaults.baseURL = "https://to-do-project-etsx.onrender.com";
 function App() {
     const [userId, setUserId] = useState(() => {
         const saved = localStorage.getItem("userId");
@@ -56,7 +56,9 @@ function App() {
     };
 
     if (!userId) {
+
         return (
+
             <div style={styles.loginWrapper}>
                 <div style={styles.loginBox}>
                     <h2>Logowanie</h2>
