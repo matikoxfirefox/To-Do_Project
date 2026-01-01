@@ -2,11 +2,14 @@ using Backend.Models;
 using Backend.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Net.Mail;
-
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 var builder = WebApplication.CreateBuilder(args);
+var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL");
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(connectionString));
 
-builder.Services.AddDbContext<AppDbContext>(options => 
-    options.UseNpgsql("Host=localhost;Port=5432;Database=ToDoDb;Username=postgres;Password=Maskotis123"));
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(connectionString));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddCors(options =>
@@ -214,8 +217,8 @@ app.MapGet("/api/users/{userId}/groups", async (AppDbContext db, int userId) =>
 
     return Results.Ok(allGroups);
 });
-
-app.Urls.Add("http://localhost:5263");
+app.Urls.Add($"http://*:{port}");
+// app.Urls.Add("http://localhost:5263");
 app.Run();
 
 public record AddUserToGroupDto(string email);
