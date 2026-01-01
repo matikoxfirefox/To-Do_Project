@@ -26,6 +26,10 @@ namespace Backend.Data
                 .HasOne(t => t.Owner)
                 .WithMany()
                 .HasForeignKey(t => t.OwnerId);
+            modelBuilder.Entity<User>()
+                .HasIndex(u => u.Email)
+                .IsUnique();
+
 
         }
     }

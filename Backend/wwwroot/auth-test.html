@@ -114,7 +114,8 @@
         ul.innerHTML = "";
         todos.forEach(todo => {
             const li = document.createElement("li");
-            li.innerHTML = `<input type="checkbox" ${todo.isDone ? "checked" : ""} onchange="toggleDone(${todo.id}, this.checked)"> ${todo.title} <button onclick="deleteTodo(${todo.id})">Usuń</button>`;
+            li.innerHTML = `<input type="checkbox" ${todo.isDone ? "checked" : ""} onchange="toggleDone(${todo.id}, this.checked)"> 
+${todo.title} <button onclick="deleteTodo(${todo.id})">Usuń</button>`;
             ul.appendChild(li);
         });
     }
