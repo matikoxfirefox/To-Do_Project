@@ -6,7 +6,7 @@ using System.Net.Mail;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<AppDbContext>(options => 
-    options.UseNpgsql("Host=localhost;Port=5432;Database=ToDoDb;Username=postgres;Password=Maskotis123"));
+    options.UseNpgsql(Environment.GetEnvironmentVariable("postgresql://tododb_qsy2_user:uY3vSiSn8zo08H3SMO89pZyBwByfrjDL@dpg-d5be4bmr433s738tm2f0-a/tododb_qsy2")));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddCors(options =>
