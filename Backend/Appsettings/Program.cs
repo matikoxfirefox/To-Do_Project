@@ -4,6 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using System.Net.Mail;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
 builder.Services.AddDbContext<AppDbContext>(options => 
     options.UseNpgsql("Host=localhost;Port=5432;Database=ToDoDb;Username=postgres;Password=Maskotis123"));
 builder.Services.AddEndpointsApiExplorer();
@@ -213,7 +215,7 @@ app.MapGet("/api/users/{userId}/groups", async (AppDbContext db, int userId) =>
 
     return Results.Ok(allGroups);
 });
-
+app.Urls.Add($"http://*:{port}");
 app.Urls.Add("http://localhost:5263");
 app.Run();
 
