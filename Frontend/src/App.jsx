@@ -5,7 +5,7 @@ import Groups from "./components/Groups";
 import ToDoList from "./components/ToDoList";
 import Contact from "./components/Contact";
 import About from "./components/About.jsx";
-const API = "http://localhost:5263/api";
+const API = "https://untethered-supererogatory-elsa.ngrok-free.dev/";
 
 function App() {
     const [userId, setUserId] = useState(() => {
